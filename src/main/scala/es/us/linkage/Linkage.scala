@@ -40,43 +40,55 @@ class Linkage(
     //var cluster2: Int = _
 
     val linkageModel = new LinkageModel(scala.collection.mutable.Map[Long, Seq[(Int, Int)]]())
-    /*
-      for (i <- 0 to data.count().toInt) {
-        var c1 = indexedData.lookup(i).head
-        for (j <- i + 1 to data.count().toInt) {
-          var c2 = indexedData.lookup(j).head
-          var d = Linkage.clusterDistance(c1, c2, distanceMatrix)
-          if (d < min) {
-            cluster1 = i
-            cluster2 = j
-          }
-        }
-      }
-  */
-    var a = 0;
-    while (a < 3) {
+
+    var a = 0
+    while (a < numClusters) {
       println("ENTRO EN WHILE")
+
+      var cluster1: Cluster = null
+      var cluster2: Cluster = null
+      var clustersRes: Seq[((Long, Cluster), (Long, Cluster))] = Nil
 
       val cartesianData = indexedData
         .cartesian(indexedData)
         .filter { case (x, y) => x != y }
         .cache()
 
-      val minAux = cartesianData.map { case (x, y) =>
-        Linkage.clusterDistance(x._2, y._2, distanceMatrix)
-      }.min()
-      println("Nuevo mínimo:" + minAux)
+      distanceStrategy match {
+        case "min" => {
+          //Calcula distancia
+          val minAux = cartesianData.map { case (x, y) =>
+            Linkage.clusterDistance(x._2, y._2, distanceMatrix, distanceStrategy)
+          }.min()
+          println("Nuevo mínimo:" + minAux)
 
+          //Búsqueda del valor mínimo en los datos
+          clustersRes = cartesianData.map { case (x, y) =>
+            ((x, y), Linkage.clusterDistance(x._2, y._2, distanceMatrix, distanceStrategy))
+          }.map(_.swap)
+            .lookup(minAux)
 
-      val clustersRes = cartesianData.map { case (x, y) =>
-        ((x, y), Linkage.clusterDistance(x._2, y._2, distanceMatrix))
-      }.map(_.swap)
-        .lookup(minAux)
+        }
+        case "max" => {
+          //Calcula distancia
+          val maxAux = cartesianData.map { case (x, y) =>
+            Linkage.clusterDistance(x._2, y._2, distanceMatrix, distanceStrategy)
+          }.max()
+          println("Nuevo máximo:" + maxAux)
+
+          //Búsqueda del valor mínimo en los datos
+          clustersRes = cartesianData.map { case (x, y) =>
+            ((x, y), Linkage.clusterDistance(x._2, y._2, distanceMatrix, distanceStrategy))
+          }.map(_.swap)
+            .lookup(maxAux)
+        }
+      }
+
 
       println("PAR ENCONTRADO:")
 
-      val cluster1 = clustersRes.head._1._2
-      val cluster2 = clustersRes.head._2._2
+      cluster1 = clustersRes.head._1._2
+      cluster2 = clustersRes.head._2._2
       val newIndex = cont.value
       cont.add(1)
 
@@ -95,14 +107,13 @@ class Linkage(
 
       //Se eliminan los clusters del RDD
       val filteredData = indexedData
-        .filter(x => !(cluster1.getCoordinates.contains(x._1.toInt) || cluster2.getCoordinates.contains(x._1.toInt)))
-
-      println("NUEVOS CLUSTERS:")
-      println(filteredData.map(_._1.toString).collect().mkString(";"))
-
+        .filter(x => c1 != x._1.toInt && c2 != x._1.toInt)
 
       //Se inserta el nuevo cluster en el RDD
       indexedData = filteredData.union(newClusterRDD)
+
+      println("NUEVOS CLUSTERS:")
+      println(indexedData.map(_._1.toString).collect().mkString(";"))
 
       //Se agregan los puntos
       linkageModel.getClusters += newIndex -> Seq((c1, c2))
@@ -115,8 +126,9 @@ class Linkage(
   def prueba(
               c1: Cluster,
               c2: Cluster,
-              distanceMatrix: scala.collection.Map[Long, Vector]): Double = {
-    return Linkage.clusterDistance(c1, c2, distanceMatrix)
+              distanceMatrix: scala.collection.Map[Long, Vector],
+              distanceStrategy: String): Double = {
+    return Linkage.clusterDistance(c1, c2, distanceMatrix, distanceStrategy)
 
   }
 
@@ -130,20 +142,42 @@ object Linkage {
   def clusterDistance(
                        c1: Cluster,
                        c2: Cluster,
-                       distanceMatrix: scala.collection.Map[Long, Vector]): Double = {
-    var minAux: Double = 100.0
+                       distanceMatrix: scala.collection.Map[Long, Vector],
+                       strategy: String): Double = {
+    var res = 0.0
 
-    c1.getCoordinates.foreach { x =>
-      c2.getCoordinates.foreach { y =>
+    strategy match {
+      case "min" => {
+        res = 100.0
 
-        val aux = distanceMatrix(x).apply(y)
-        if (aux < minAux)
-          minAux = aux
+        c1.getCoordinates.foreach { x =>
+          c2.getCoordinates.foreach { y =>
+            val aux = distanceMatrix(x).apply(y)
+            if (aux < res)
+              res = aux
+
+          }
+        }
+
+      }
+      case "max" => {
+        res = 0.0
+        c1.getCoordinates.foreach { x =>
+          c2.getCoordinates.foreach { y =>
+
+            val aux = distanceMatrix(x).apply(y)
+            if (aux > res)
+              res = aux
+          }
+        }
+      }
+      case "avg" => {
 
       }
     }
 
-    return minAux
+    return res
+
   }
 
 
