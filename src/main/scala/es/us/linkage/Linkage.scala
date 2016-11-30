@@ -25,7 +25,7 @@ class Linkage(
   }
 
   def runAlgorithm(data: RDD[Cluster],
-                   distanceMatrix: scala.collection.Map[Long, Vector]): LinkageModel = {
+                   distanceMatrix: scala.collection.Map[Long, Double]): LinkageModel = {
 
     val sc = data.sparkContext
     val contIni = data.count()
@@ -126,7 +126,7 @@ class Linkage(
   def prueba(
               c1: Cluster,
               c2: Cluster,
-              distanceMatrix: scala.collection.Map[Long, Vector],
+              distanceMatrix: scala.collection.Map[Long, Double],
               distanceStrategy: String): Double = {
     return Linkage.clusterDistance(c1, c2, distanceMatrix, distanceStrategy)
 
@@ -142,9 +142,10 @@ object Linkage {
   def clusterDistance(
                        c1: Cluster,
                        c2: Cluster,
-                       distanceMatrix: scala.collection.Map[Long, Vector],
+                       distanceMatrix: scala.collection.Map[Long, Double],
                        strategy: String): Double = {
     var res = 0.0
+    val ncol = 4//TODO MODIFICA ESTO CHURRA
 
     strategy match {
       case "min" => {
@@ -152,7 +153,7 @@ object Linkage {
 
         c1.getCoordinates.foreach { x =>
           c2.getCoordinates.foreach { y =>
-            val aux = distanceMatrix(x).apply(y)
+            val aux = distanceMatrix((x * ncol) + y)
             if (aux < res)
               res = aux
 
@@ -165,7 +166,7 @@ object Linkage {
         c1.getCoordinates.foreach { x =>
           c2.getCoordinates.foreach { y =>
 
-            val aux = distanceMatrix(x).apply(y)
+            val aux = distanceMatrix((x * ncol) + y)
             if (aux > res)
               res = aux
           }
