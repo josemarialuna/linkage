@@ -17,9 +17,20 @@ class Cluster(private var coordinates: List[Int]) extends Serializable {
   }
 
 
+
+
   override def toString = s"Cluster($getCoordinates)"
 }
 
 object Cluster {
 
+  //Create initial clusters from a given number
+  def createInitClusters(numPoints: Int): Seq[Cluster] = {
+    var res = Seq.empty[Cluster]
+
+    for (i <- 0 until numPoints) {
+      res = res :+ new Cluster(List(i))
+    }
+    res
+  }
 }

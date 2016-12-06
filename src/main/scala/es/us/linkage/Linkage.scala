@@ -25,24 +25,19 @@ class Linkage(
   }
 
   def runAlgorithm(data: RDD[Cluster],
-                   distanceMatrix: scala.collection.Map[Long, Double]): LinkageModel = {
+                   distanceMatrix: scala.collection.Map[(Int, Int),Float]): LinkageModel = {
 
     val sc = data.sparkContext
     val contIni = data.count()
 
-
     val cont = sc.accumulator(contIni)
 
-    //val cartesianData = data.cartesian(data)
-    var indexedData = data.zipWithIndex().map(_.swap)
-    var min = 10
-    //var cluster1: Int = _
-    //var cluster2: Int = _
+    var indexedData = data.zipWithIndex().map(_.swap).cache()
 
     val linkageModel = new LinkageModel(scala.collection.mutable.Map[Long, Seq[(Int, Int)]]())
 
     var a = 0
-    while (a < numClusters) {
+    while (a < (contIni - numClusters)) {
       println("ENTRO EN WHILE")
 
       var cluster1: Cluster = null
@@ -84,7 +79,6 @@ class Linkage(
         }
       }
 
-
       println("PAR ENCONTRADO:")
 
       cluster1 = clustersRes.head._1._2
@@ -122,7 +116,7 @@ class Linkage(
     return linkageModel
   }
 
-
+/*
   def prueba(
               c1: Cluster,
               c2: Cluster,
@@ -131,7 +125,7 @@ class Linkage(
     return Linkage.clusterDistance(c1, c2, distanceMatrix, distanceStrategy)
 
   }
-
+*/
 
 }
 
@@ -142,10 +136,11 @@ object Linkage {
   def clusterDistance(
                        c1: Cluster,
                        c2: Cluster,
-                       distanceMatrix: scala.collection.Map[Long, Double],
+                       distanceMatrix: scala.collection.Map[(Int, Int),Float],
                        strategy: String): Double = {
     var res = 0.0
-    val ncol = 4//TODO MODIFICA ESTO CHURRA
+    var aux = res
+    val ncol = 4 //TODO MODIFICA ESTO CHURRA
 
     strategy match {
       case "min" => {
@@ -153,7 +148,14 @@ object Linkage {
 
         c1.getCoordinates.foreach { x =>
           c2.getCoordinates.foreach { y =>
-            val aux = distanceMatrix((x * ncol) + y)
+            //Look for just in the upper diagonal of the "matrix"
+            if (x < y) {
+              aux = distanceMatrix(x,y)
+            }
+            else {
+              aux = distanceMatrix(y,x)
+            }
+
             if (aux < res)
               res = aux
 
@@ -165,8 +167,12 @@ object Linkage {
         res = 0.0
         c1.getCoordinates.foreach { x =>
           c2.getCoordinates.foreach { y =>
-
-            val aux = distanceMatrix((x * ncol) + y)
+            //Look for just in the upper diagonal of the "matrix"
+            if (x < y) {
+              aux = distanceMatrix(x,y)
+            } else {
+              aux = distanceMatrix(y,x)
+            }
             if (aux > res)
               res = aux
           }

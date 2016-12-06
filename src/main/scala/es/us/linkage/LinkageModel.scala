@@ -5,8 +5,6 @@ package es.us.linkage
   */
 class LinkageModel(private var clusters: scala.collection.mutable.Map[Long, Seq[(Int, Int)]]) extends Serializable {
 
-  import org.apache.spark.mllib.linalg.Vector
-
   def getClusters: scala.collection.mutable.Map[Long, Seq[(Int, Int)]] = clusters
 
   def setCClusters(clusters: scala.collection.mutable.Map[Long, Seq[(Int, Int)]]): this.type = {
@@ -15,8 +13,22 @@ class LinkageModel(private var clusters: scala.collection.mutable.Map[Long, Seq[
   }
 
 
-  def printSchema(): Unit = {
-    println(this.getClusters.mkString(";"))
+  def printSchema(separator: String): Unit = {
+    println(this.getClusters
+      .toList
+      .sortBy(_._1)
+      .map(x => s"${x._1},${x._2.head._1},${x._2.head._2}")
+      .mkString(separator))
+
   }
+
+  def saveSchema: Seq[String] = {
+    this.getClusters
+      .toSeq
+      .sortBy(_._1)
+      .map(x => s"${x._1},${x._2.head._1},${x._2.head._2}")
+
+  }
+
 
 }
