@@ -12,6 +12,26 @@ class LinkageModel(private var clusters: scala.collection.mutable.Map[Long, Seq[
     this
   }
 
+  //Devuelve el cluster al que pertenece el punto, o el punto en el caso en que no esté
+  def getRealPoint(point: Int): Int = {
+    var res = point
+    var auxPoint = point
+    var found = false
+    val default = (-1, "")
+    while (!found) {
+      val aux = this.clusters
+        .find(x => (x._2.head._1 == res || x._2.head._2 == res))
+        .getOrElse(default)._1
+        .asInstanceOf[Number].intValue()
+      if (aux == -1) {
+        found = true
+      } else {
+        res = aux
+      }
+    }
+    res
+  }
+
 
   def printSchema(separator: String): Unit = {
     println(this.getClusters
