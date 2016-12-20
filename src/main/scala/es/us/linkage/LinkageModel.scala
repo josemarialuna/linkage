@@ -36,19 +36,26 @@ class LinkageModel(private var clusters: scala.collection.mutable.Map[Long, Seq[
     this.getClusters.exists(_._1 == point)
   }
 
+  //Dado un punto de un cluster, devuelve todos los puntos de ese cluster
   def giveMePoints(point: Int): List[Int] = {
     var res = List[Int]()
     val aux = this.getClusters(point)
     if (isCluster(aux.head._1)) {
       res = res ::: giveMePoints(aux.head._1)
+      if (isCluster(aux.head._2)) {
+        res = res ::: giveMePoints(aux.head._2)
+      } else {
+        res = res ::: List(aux.head._2)
+      }
+    } else {
+      if (isCluster(aux.head._2)) {
+        res = res ::: giveMePoints(aux.head._2)
+        res = res ::: List(aux.head._1)
+      } else {
+        res = res ::: List(aux.head._1, aux.head._2)
+      }
+    }
 
-    }
-    if (isCluster(aux.head._2)) {
-      res = res ::: giveMePoints(aux.head._2)
-    }
-    if (!isCluster(aux.head._1) && !isCluster(aux.head._2)) {
-      res = res ::: List(aux.head._1, aux.head._2)
-    }
     res
   }
 

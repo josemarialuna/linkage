@@ -71,24 +71,45 @@ class Linkage(
       //Se guarda en el modelo resultado
       linkageModel.getClusters += newIndex -> Seq((punto1, punto2))
 
-      //se elimina la distancia de la matriz
-      if(linkageModel.isCluster(punto1)){
+      //se eliminan la distancia de la matriz
+      if (linkageModel.isCluster(punto1)) {
         val clusterPoints1 = linkageModel.giveMePoints(punto1)
-        if(linkageModel.isCluster(punto2)){
+        if (linkageModel.isCluster(punto2)) {
           val clusterPoints2 = linkageModel.giveMePoints(punto2)
-          for(clusterPoint1<-clusterPoints1){
-            for(clusterPoint2<-clusterPoints2){
-
+          for (clusterPoint1 <- clusterPoints1) {
+            for (clusterPoint2 <- clusterPoints2) {
+              if (clusterPoint1 < clusterPoint2) {
+                matrix = matrix.filter(x => !(x.getIdW1 == clusterPoint1 && x.getIdW2 == clusterPoint2))
+              } else {
+                matrix = matrix.filter(x => !(x.getIdW1 == clusterPoint2 && x.getIdW2 == clusterPoint1))
+              }
             }
           }
-        }else{
-
+        } else {
+          for (clusterPoint1 <- clusterPoints1) {
+            if (clusterPoint1 < punto2) {
+              matrix = matrix.filter(x => !(x.getIdW1 == clusterPoint1 && x.getIdW2 == punto2))
+            } else {
+              matrix = matrix.filter(x => !(x.getIdW1 == punto2 && x.getIdW2 == clusterPoint1))
+            }
+          }
         }
-      }else{
-        if(linkageModel.isCluster(punto2)){
-
-        }else{
-
+      } else {
+        if (linkageModel.isCluster(punto2)) {
+          val clusterPoints2 = linkageModel.giveMePoints(punto2)
+          for (clusterPoint2 <- clusterPoints2) {
+            if (clusterPoint2 < punto1) {
+              matrix = matrix.filter(x => !(x.getIdW1 == clusterPoint2 && x.getIdW2 == punto1))
+            } else {
+              matrix = matrix.filter(x => !(x.getIdW1 == punto1 && x.getIdW2 == clusterPoint2))
+            }
+          }
+        } else {
+          if (punto1 < punto2) {
+            matrix = matrix.filter(x => !(x.getIdW1 == punto1 && x.getIdW2 == punto2))
+          } else {
+            matrix = matrix.filter(x => !(x.getIdW1 == punto2 && x.getIdW2 == punto1))
+          }
         }
       }
 
@@ -97,7 +118,7 @@ class Linkage(
       matrix = matrix.filter(x => !(x.getIdW1 == punto1Aux && x.getIdW2 == punto2Aux))
 
       a += 1
-      if (a % 10 == 0)
+      if (a % 2 == 0)
         matrix.checkpoint()
     }
     return linkageModel
