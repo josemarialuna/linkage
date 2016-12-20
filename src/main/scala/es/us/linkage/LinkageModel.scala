@@ -32,6 +32,26 @@ class LinkageModel(private var clusters: scala.collection.mutable.Map[Long, Seq[
     res
   }
 
+  def isCluster(point: Int): Boolean = {
+    this.getClusters.exists(_._1 == point)
+  }
+
+  def giveMePoints(point: Int): List[Int] = {
+    var res = List[Int]()
+    val aux = this.getClusters(point)
+    if (isCluster(aux.head._1)) {
+      res = res ::: giveMePoints(aux.head._1)
+
+    }
+    if (isCluster(aux.head._2)) {
+      res = res ::: giveMePoints(aux.head._2)
+    }
+    if (!isCluster(aux.head._1) && !isCluster(aux.head._2)) {
+      res = res ::: List(aux.head._1, aux.head._2)
+    }
+    res
+  }
+
 
   def printSchema(separator: String): Unit = {
     println(this.getClusters
