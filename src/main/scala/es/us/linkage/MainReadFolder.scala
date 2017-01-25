@@ -7,11 +7,14 @@ object MainReadFolder {
 
     val conf = new SparkConf()
       .setAppName("Linkage")
-      //.setMaster("local[*]")
+      .setMaster("local[*]")
     //.set("spark.driver.maxResultSize", "0")
     //.set("spark.executor.heartbeatInterval", "3000s")
 
     val sc = new SparkContext(conf)
+
+    sc.setCheckpointDir("checkpoints")
+
     val fileOriginal = "C:\\datasets\\distancesMap"
     val fileTest = "C:\\datasets\\distanceTest"
 
@@ -22,7 +25,7 @@ object MainReadFolder {
     var numClusters = 1
     var strategyDistance = "min"
 
-    if (args.size > 2) {
+    if (args.length > 2) {
       origen = args(0)
       destino = args(1)
       numPartitions = args(2).toInt
@@ -44,8 +47,8 @@ object MainReadFolder {
     //(0.0), (1.0), (3.0), (5.0), (6.0), (1.0), (0.0), (3.0), (7.0), (8.0), (3.0), (3.0), (0.0), (7.0), (8.0), (5.0), (7.0), (7.0), (0.0), (2.0), (6.0), (8.0), (8.0), (2.0), (0.0)) )
 
 
-    val data = sc.parallelize(Cluster.createInitClusters(numPoints))
-    println(data.count())
+    //val data = sc.parallelize(Cluster.createInitClusters(numPoints))
+    //println(data.count())
 
     //min,max,avg
     val linkage = new Linkage(numClusters, strategyDistance)

@@ -26,6 +26,17 @@ class Distance(private var idW1: Int, private var idW2: Int, private var dist: F
     this
   }
 
-  override def toString = s"Distance($getIdW1-$getIdW2)"
+  override def toString = s"Distance($getIdW1-$getIdW2=>$getDist)"
+
+  override def equals(that: Any) = {
+    that match {
+      case f: Distance => f.getIdW1 == idW1 && f.getIdW2 == idW2 && f.getDist == dist
+      case _ => false
+    }
+  }
+
+  override def hashCode: Int = {
+    (idW1 * idW2 * dist).toInt
+  }
 
 }
