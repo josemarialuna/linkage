@@ -1,6 +1,6 @@
 package es.us.linkage
 
-import org.apache.spark.{HashPartitioner, SparkConf, SparkContext}
+import org.apache.spark.{SparkConf, SparkContext}
 
 object MainReadFolder {
   def main(args: Array[String]): Unit = {
@@ -8,6 +8,7 @@ object MainReadFolder {
     val conf = new SparkConf()
       .setAppName("Linkage")
       .setMaster("local[*]")
+    //.set("spark.driver.parallelism", "8")
     //.set("spark.driver.maxResultSize", "0")
     //.set("spark.executor.heartbeatInterval", "3000s")
 
@@ -18,10 +19,10 @@ object MainReadFolder {
     val fileOriginal = "C:\\datasets\\distancesMap"
     val fileTest = "C:\\datasets\\distanceTest"
 
-    var origen: String = fileTest
+    var origen: String = fileOriginal
     var destino: String = Utils.whatTimeIsIt()
-    var numPartitions = 4 // cluster has 25 nodes with 4 cores. You therefore need 4 x 25 = 100 partitions.
-    var numPoints = 5
+    var numPartitions = 12 // cluster has 25 nodes with 4 cores. You therefore need 4 x 25 = 100 partitions.
+    var numPoints = 9170
     var numClusters = 1
     var strategyDistance = "min"
 
@@ -37,7 +38,7 @@ object MainReadFolder {
 
     //val partCustom = new HashPartitioner(numPartitions)
 
-    val distances = sc.textFile(origen,numPartitions)
+    val distances = sc.textFile(origen, numPartitions)
       .map(s => s.split(',').map(_.toFloat))
       .map { case x =>
         new Distance(x(0).toInt, x(1).toInt, x(2))

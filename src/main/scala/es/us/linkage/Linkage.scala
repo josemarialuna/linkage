@@ -128,9 +128,9 @@ class Linkage(
   def runAlgorithm(distanceMatrix: RDD[Distance], numPoints: Int): LinkageModel = {
 
     var matrix = distanceMatrix
-
     val sc = distanceMatrix.sparkContext
     val cont = sc.accumulator(numPoints)
+    val partitionNumber = distanceMatrix.getNumPartitions
 
     val linkageModel = new LinkageModel(scala.collection.mutable.Map[Long, Seq[(Int, Int)]]())
 
@@ -139,86 +139,87 @@ class Linkage(
       def compare(a: Distance, b: Distance) = a.getDist compare b.getDist
     }
 
-    var a = 0
-    while (a < (numPoints - numClusters)) {
-      println("ENTRO EN WHILE")
-
-      var clustersRes: Distance = null
+    for (a <- 0 until (numPoints - numClusters)) {
+      val start = System.nanoTime
 
       println("Buscando minimo:")
-      distanceStrategy match {
+      val clustersRes = distanceStrategy match {
         case "min" =>
-          matrix.collect().foreach(println(_))
-          clustersRes = matrix.min()(DistOrdering)
-          println(s"Nuevo mínimo: $clustersRes")
-
+          //matrix.collect().foreach(println(_))
+          matrix.min()(DistOrdering)
 
         case "max" =>
           //Calcula distancia
-          clustersRes = matrix.max()(DistOrdering)
+          matrix.max()(DistOrdering)
 
       }
+      println(s"Nuevo mínimo: $clustersRes")
 
       val punto1 = clustersRes.getIdW1
       val punto2 = clustersRes.getIdW2
       cont.add(1)
       val newIndex = cont.value.toLong
 
-
       println("Nuevo Cluster: " + newIndex + ":" + punto1 + "-" + punto2)
 
-      //Se guarda en el modelo resultado
-      linkageModel.getClusters += newIndex -> Seq((punto1, punto2))
+      //Si no es el ultimo cluster
+      if (a < (numPoints - numClusters - 1)) {
+        //Se guarda en el modelo resultado
+        linkageModel.getClusters += newIndex -> Seq((punto1, punto2))
 
-      //Se elimina el punto encontrado
-      matrix = matrix.filter(x => !(x.getIdW1 == punto1 && x.getIdW2 == punto2))
+        //Se elimina el punto encontrado
+        matrix = matrix.filter(x => !(x.getIdW1 == punto1 && x.getIdW2 == punto2)).repartition(partitionNumber).cache()
 
-      //Se crea un nuevo punto siguiendo la estrategia
-      distanceStrategy match {
-        case "min" =>
-          val rddPoints1 = matrix.filter(_.getIdW1 == punto1)
-          val rddPoints2 = matrix.filter(_.getIdW1 == punto2)
-          val rddUnionPoints = rddPoints1.union(rddPoints2)
+        //Se crea un nuevo punto siguiendo la estrategia
+        matrix = distanceStrategy match {
+          case "min" =>
+            val rddPoints1 = matrix.filter(_.getIdW1 == punto1).repartition(partitionNumber).cache()
+            val rddPoints2 = matrix.filter(_.getIdW1 == punto2).repartition(partitionNumber).cache()
+            val rddUnionPoints = rddPoints1.union(rddPoints2)
 
-          //Se comprueba cual de los dos RDD tienen más puntos
-          val newPoints = if (rddPoints1.count() < rddPoints2.count()) {
-            val listPoints2 = rddPoints2.map(x => (x.getIdW2, x.getDist)).collectAsMap()
-            rddPoints1.map(x => new Distance(newIndex.toInt, x.getIdW2, math.min(x.getDist, listPoints2(x.getIdW2))))
-          } else {
-            val listPoints1 = rddPoints1.map(x => (x.getIdW2, x.getDist)).collectAsMap()
-            rddPoints2.map(x => new Distance(newIndex.toInt, x.getIdW2, math.min(x.getDist, listPoints1(x.getIdW2))))
-          }
+            //Se comprueba cual de los dos RDD tienen más puntos
+            val newPoints = if (rddPoints1.count() < rddPoints2.count()) {
+              val listPoints2 = rddPoints2.map(x => (x.getIdW2, x.getDist)).collectAsMap()
+              rddPoints1.map(x => new Distance(newIndex.toInt, x.getIdW2, math.min(x.getDist, listPoints2(x.getIdW2))))
+            } else {
+              val listPoints1 = rddPoints1.map(x => (x.getIdW2, x.getDist)).collectAsMap()
+              rddPoints2.map(x => new Distance(newIndex.toInt, x.getIdW2, math.min(x.getDist, listPoints1(x.getIdW2))))
+            }
 
-          //Elimino los puntos completos
-          var matrixSub = matrix.subtract(rddUnionPoints)
+            //Elimino los puntos completos
+            val matrixSub = matrix.subtract(rddUnionPoints)
 
-          //agrego puntos con el nuevo indice
-          matrix = matrixSub.union(newPoints)
+            //agrego puntos con el nuevo indice
+            matrix = matrixSub.union(newPoints)
+
+            val matrixSub2 = matrixSub.filter(x => x.getIdW2 == punto1 || x.getIdW2 == punto2).cache()
+
+            if (matrixSub2.count() > 0) {
+              val matrixCartesian = matrixSub2.cartesian(matrixSub2)
+                .filter(x => x._1.getIdW1 == x._2.getIdW1 && x._1.getIdW2 < x._2.getIdW2)
+
+              val editedPoints = matrixCartesian.map(x => new Distance(x._1.getIdW1, newIndex.toInt, math.min(x._1.getDist, x._2.getDist)))
+
+              matrix = matrix.subtract(matrixSub2).union(editedPoints).repartition(partitionNumber)
+
+            }
+
+            matrix
 
 
-          matrixSub = matrixSub.filter(x => x.getIdW2 == punto1 || x.getIdW2 == punto2)
-          if (matrixSub.count() > 0) {
+          case "max" =>
+            //Calcula distancia
+            matrix
 
-            val matrixCartesian = matrixSub.cartesian(matrixSub)
-              .filter(x => x._1.getIdW1 == x._2.getIdW1 && x._1.getIdW2 < x._2.getIdW2)
-
-            val editedPoints = matrixCartesian.map(x => new Distance(x._1.getIdW1, newIndex.toInt, math.min(x._1.getDist, x._2.getDist)))
-
-            matrix = matrix.subtract(matrixSub).union(editedPoints)
-            editedPoints.unpersist()
-
-          }
-
-
-        case "max" =>
-          //Calcula distancia
-          clustersRes = matrix.max()(DistOrdering)
-
+        }
+        matrix.cache()
       }
+      if (a % 5 == 0)
+        matrix.checkpoint()
 
-      a += 1
-      //if (a % 2 == 0)
-      //matrix.checkpoint()
+      val duration = (System.nanoTime - start) / 1e9d
+      println(s"TIEMPO: $duration")
+
     }
     linkageModel
   }
