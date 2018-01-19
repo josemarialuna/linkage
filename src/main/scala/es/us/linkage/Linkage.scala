@@ -192,7 +192,7 @@ class Linkage(
             //agrego puntos con el nuevo indice
             matrix = matrixSub.union(newPoints)
 
-            val matrixSub2 = matrixSub.filter(x => x.getIdW2 == punto1 || x.getIdW2 == punto2).cache()
+            val matrixSub2 = matrixSub.filter(x => x.getIdW2 == punto1 || x.getIdW2 == punto2).repartition(partitionNumber).cache()
 
             if (matrixSub2.count() > 0) {
               val matrixCartesian = matrixSub2.cartesian(matrixSub2)

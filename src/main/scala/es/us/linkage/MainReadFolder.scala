@@ -7,7 +7,7 @@ object MainReadFolder {
 
     val conf = new SparkConf()
       .setAppName("Linkage")
-      .setMaster("local[*]")
+    .setMaster("local[*]")
     //.set("spark.driver.parallelism", "8")
     //.set("spark.driver.maxResultSize", "0")
     //.set("spark.executor.heartbeatInterval", "3000s")
@@ -19,10 +19,10 @@ object MainReadFolder {
     val fileOriginal = "C:\\datasets\\distancesMap"
     val fileTest = "C:\\datasets\\distanceTest"
 
-    var origen: String = fileOriginal
+    var origen: String = fileTest
     var destino: String = Utils.whatTimeIsIt()
-    var numPartitions = 12 // cluster has 25 nodes with 4 cores. You therefore need 4 x 25 = 100 partitions.
-    var numPoints = 9170
+    var numPartitions = 8 // cluster has 25 nodes with 4 cores. You therefore need 4 x 25 = 100 partitions.
+    var numPoints = 7
     var numClusters = 1
     var strategyDistance = "min"
 
